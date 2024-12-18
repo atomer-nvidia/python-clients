@@ -55,6 +55,7 @@ def streaming_transcription_worker(
         config = riva.client.StreamingRecognitionConfig(
             config=riva.client.RecognitionConfig(
                 language_code=args.language_code,
+                model=args.model_name,
                 max_alternatives=args.max_alternatives,
                 profanity_filter=args.profanity_filter,
                 enable_automatic_punctuation=args.automatic_punctuation,
@@ -62,6 +63,19 @@ def streaming_transcription_worker(
                 enable_word_time_offsets=args.word_time_offsets,
             ),
             interim_results=True,
+        )
+        riva.client.add_endpoint_parameters_to_config(
+            config,
+            args.start_history,
+            args.start_threshold,
+            args.stop_history,
+            args.stop_history_eou,
+            args.stop_threshold,
+            args.stop_threshold_eou
+        )
+        riva.client.add_custom_configuration_to_config(
+            config,
+            args.custom_configuration
         )
         riva.client.add_word_boosting_to_config(config, args.boosted_lm_words, args.boosted_lm_score)
         for _ in range(args.num_iterations):

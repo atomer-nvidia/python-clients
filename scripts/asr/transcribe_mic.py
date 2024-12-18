@@ -47,6 +47,7 @@ def main() -> None:
         config=riva.client.RecognitionConfig(
             encoding=riva.client.AudioEncoding.LINEAR_PCM,
             language_code=args.language_code,
+            model=args.model_name,
             max_alternatives=1,
             profanity_filter=args.profanity_filter,
             enable_automatic_punctuation=args.automatic_punctuation,
@@ -57,6 +58,19 @@ def main() -> None:
         interim_results=True,
     )
     riva.client.add_word_boosting_to_config(config, args.boosted_lm_words, args.boosted_lm_score)
+    riva.client.add_endpoint_parameters_to_config(
+        config,
+        args.start_history,
+        args.start_threshold,
+        args.stop_history,
+        args.stop_history_eou,
+        args.stop_threshold,
+        args.stop_threshold_eou
+    )
+    riva.client.add_custom_configuration_to_config(
+        config,
+        args.custom_configuration
+    )
     with riva.client.audio_io.MicrophoneStream(
         args.sample_rate_hz,
         args.file_streaming_chunk,

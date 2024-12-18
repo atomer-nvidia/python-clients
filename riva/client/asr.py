@@ -117,11 +117,60 @@ def add_audio_file_specs_to_config(
 def add_speaker_diarization_to_config(
     config: Union[rasr.RecognitionConfig],
     diarization_enable: bool,
+    diarization_max_speakers: int,
 ) -> None:
     inner_config: rasr.RecognitionConfig = config if isinstance(config, rasr.RecognitionConfig) else config.config
     if diarization_enable:
-        diarization_config = rasr.SpeakerDiarizationConfig(enable_speaker_diarization=True)
+        diarization_config = rasr.SpeakerDiarizationConfig(
+            enable_speaker_diarization=True,
+            max_speaker_count=diarization_max_speakers,
+        )
         inner_config.diarization_config.CopyFrom(diarization_config)
+
+
+def add_endpoint_parameters_to_config(
+    config: Union[rasr.StreamingRecognitionConfig, rasr.RecognitionConfig],
+    start_history: int,
+    start_threshold: float,
+    stop_history: int,
+    stop_history_eou: int,
+    stop_threshold: float,
+    stop_threshold_eou: float,
+) -> None:
+    if not (start_history > 0 or start_threshold > 0 or stop_history > 0 or stop_history_eou > 0 or stop_threshold > 0 or stop_threshold_eou > 0):
+        return 
+         
+    inner_config: rasr.RecognitionConfig = config if isinstance(config, rasr.RecognitionConfig) else config.config
+    endpointing_config = rasr.EndpointingConfig()
+    if start_history > 0:
+        endpointing_config.start_history = start_history
+    if start_threshold > 0:
+        endpointing_config.start_threshold = start_threshold
+    if stop_history > 0:
+        endpointing_config.stop_history = stop_history
+    if stop_history_eou > 0:
+        endpointing_config.stop_history_eou = stop_history_eou
+    if stop_threshold > 0:
+        endpointing_config.stop_threshold = stop_threshold
+    if stop_threshold_eou > 0:
+        endpointing_config.stop_threshold_eou = stop_threshold_eou
+    inner_config.endpointing_config.CopyFrom(endpointing_config)
+
+
+def add_custom_configuration_to_config(
+    config: Union[rasr.StreamingRecognitionConfig, rasr.RecognitionConfig],
+    custom_configuration: str,
+) -> None:
+    custom_configuration = custom_configuration.strip().replace(" ", "")
+    if not custom_configuration:
+        return
+    inner_config: rasr.RecognitionConfig = config if isinstance(config, rasr.RecognitionConfig) else config.config
+    for pair in custom_configuration.split(","):
+        key_value = pair.split(":")
+        if len(key_value) == 2:
+            inner_config.custom_configuration[key_value[0]] = key_value[1]
+        else:
+            raise ValueError(f"Invalid key:value pair {key_value}")
 
 
 PRINT_STREAMING_ADDITIONAL_INFO_MODES = ['no', 'time', 'confidence']
@@ -199,6 +248,12 @@ def print_streaming(
                 continue
             partial_transcript = ""
             for result in response.results:
+                if result.pipeline_states and len(result.pipeline_states.vad_probabilities) > 0:
+                    vad_prob_logs = "VAD States: "
+                    for vad_state in result.pipeline_states.vad_probabilities:
+                            vad_prob_logs += str(vad_state) + " "
+                    for i, f in enumerate(output_file):
+                        f.write(vad_prob_logs + "\n")
                 if not result.alternatives:
                     continue
                 transcript = result.alternatives[0].transcript
