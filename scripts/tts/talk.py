@@ -143,6 +143,9 @@ def main() -> None:
     if not args.text and not args.text_file:
         print("No input text provided")
         return
+    if args.text and args.text_file:
+        print("Cannot provide both text and text_file at the same time.")
+        return
     try:
         if args.output_device is not None or args.play_audio:
             sound_stream = riva.client.audio_io.SoundCallBack(
