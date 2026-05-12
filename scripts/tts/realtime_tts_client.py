@@ -129,6 +129,12 @@ def parse_args() -> argparse.Namespace:
         help="Quality setting for zero-shot (1-40)"
     )
 
+    parser.add_argument(
+        "--custom-configuration",
+        type=str,
+        default="",
+        help="Custom configurations to be sent to the server as key value pairs <key:value,key:value,...>"
+    )
     # Output configuration
     parser.add_argument(
         "-o", "--output",
