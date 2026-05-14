@@ -12,6 +12,7 @@ from riva.client.argparse_utils import (
     add_asr_config_argparse_parameters,
     add_realtime_config_argparse_parameters,
     add_connection_argparse_parameters,
+    cli_main,
 )
 
 
@@ -300,17 +301,22 @@ async def main() -> None:
             import riva.client.audio_io
             riva.client.audio_io.list_input_devices()
         except ModuleNotFoundError:
-            print("PyAudio not available. Please install PyAudio to list audio devices.")
+            print(
+                "PyAudio not available. Install the system PortAudio headers first "
+                "(e.g. `apt-get install -y portaudio19-dev`), then `pip install pyaudio`.",
+                file=sys.stderr,
+            )
         return
 
     setup_signal_handler()
+    await run_transcription(args)
 
-    try:
-        await run_transcription(args)
-    except Exception as e:
-        print(f"Fatal error: {e}")
-        sys.exit(1)
+
+@cli_main
+def _entry() -> int:
+    asyncio.run(main())
+    return 0
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    sys.exit(_entry())

@@ -2,13 +2,18 @@
 # SPDX-License-Identifier: MIT
 
 import argparse
+import sys
 import time
 import wave
 import json
 from pathlib import Path
 
 import riva.client
-from riva.client.argparse_utils import add_connection_argparse_parameters
+from riva.client.argparse_utils import (
+    add_connection_argparse_parameters,
+    cli_main,
+    EXIT_BAD_INPUT,
+)
 from riva.client.proto.riva_audio_pb2 import AudioEncoding
 from riva.client.tts import parse_custom_configuration
 
@@ -94,16 +99,21 @@ def parse_args() -> argparse.Namespace:
             import riva.client.audio_io
     except ModuleNotFoundError as e:
         print(f"ModuleNotFoundError: {e}")
-        print("Please install pyaudio from https://pypi.org/project/PyAudio")
+        print(
+            "Install the system PortAudio headers first "
+            "(e.g. `apt-get install -y portaudio19-dev` on Debian/Ubuntu, "
+            "`brew install portaudio` on macOS), then `pip install pyaudio`."
+        )
         exit(1)
     return args
 
 
-def main() -> None:
+@cli_main
+def main() -> int:
     args = parse_args()
     if args.output.is_dir():
-        print("Empty output file path not allowed")
-        return
+        print("Empty output file path not allowed", file=sys.stderr)
+        return EXIT_BAD_INPUT
     if args.list_devices:
         riva.client.audio_io.list_output_devices()
         return
@@ -148,11 +158,14 @@ def main() -> None:
         return
 
     if not args.text and not args.text_file:
-        print("No input text provided")
-        return
+        print("No input text provided", file=sys.stderr)
+        return EXIT_BAD_INPUT
+    if args.text is not None and not args.text.strip():
+        print("No input text provided", file=sys.stderr)
+        return EXIT_BAD_INPUT
     if args.text and args.text_file:
-        print("Cannot provide both text and text_file at the same time.")
-        return
+        print("Cannot provide both text and text_file at the same time.", file=sys.stderr)
+        return EXIT_BAD_INPUT
     try:
         if args.output_device is not None or args.play_audio:
             sound_stream = riva.client.audio_io.SoundCallBack(
@@ -218,11 +231,6 @@ def main() -> None:
                 sound_stream(resp.audio)
             if out_f is not None:
                 out_f.writeframesraw(resp.audio)
-    except Exception as e:
-        if callable(getattr(e, "details", None)):
-            print(e.details())
-        else:
-            print(e)
     finally:
         if out_f is not None:
             out_f.close()
@@ -231,4 +239,4 @@ def main() -> None:
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
